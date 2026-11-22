@@ -47,7 +47,6 @@
       box-shadow: 0 0 24px rgba(0, 0, 0, 0.06);
       position: relative;
     }
-    /* Header */
     .topbar {
       display: flex;
       align-items: center;
@@ -103,7 +102,6 @@
       border-radius: 6px;
       cursor: pointer;
     }
-    /* Content */
     .page {
       display: none;
       padding: 16px;
@@ -111,7 +109,6 @@
     .page.active {
       display: block;
     }
-    /* Login Card */
     .login-box {
       padding: 24px 16px;
     }
@@ -155,7 +152,6 @@
       outline: none;
       border-color: var(--primary);
     }
-    /* Menu Tiles (Beranda) */
     .quick-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -238,7 +234,6 @@
       color: #374151;
       line-height: 1.45;
     }
-    /* Absen Hari Ini */
     .screen-heading {
       text-align: center;
       margin-bottom: 12px;
@@ -352,7 +347,6 @@
     .btn-dark {
       background: #1f2937;
     }
-    /* Legend & History */
     .legend-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -418,7 +412,6 @@
       margin-top: 6px;
       color: #374151;
     }
-    /* Rekap & Admin */
     .rekap-item {
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -443,7 +436,6 @@
       cursor: pointer;
       color: #fff;
     }
-    /* Scanner Modal */
     .scanner-modal {
       position: fixed;
       inset: 0;
@@ -493,7 +485,6 @@
       min-height: 18px;
       margin-bottom: 12px;
     }
-    /* Print Area */
     #printArea {
       display: none;
     }
@@ -608,7 +599,6 @@
         text-decoration: underline;
       }
     }
-    /* Bottom Navigation */
     .bottom-nav {
       position: fixed;
       bottom: 0;
@@ -643,7 +633,6 @@
       font-weight: 800;
       background: rgba(0, 0, 0, 0.12);
     }
-    /* Toast / Alert */
     .toast {
       position: fixed;
       top: 64px;
@@ -804,6 +793,17 @@
       <div class="action-group">
         <div class="action-label">Absen Tugas Luar</div>
         <input type="text" id="ketTugasLuar" class="form-control" placeholder="Keterangan tugas luar / tujuan dinas..." style="margin-bottom:8px;" />
+        <label for="fotoTugasLuar" style="display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px;">
+          Unggah Foto Kegiatan Tugas Luar (Opsional - Gambar)
+        </label>
+        <input
+          type="file"
+          id="fotoTugasLuar"
+          class="form-control"
+          accept="image/*"
+          capture="environment"
+          style="margin-bottom:8px; padding:8px; font-size:12px;"
+        />
         <button id="btnTugasLuar" class="btn-action btn-red" onclick="klikTugasLuar()">Tugas Luar</button>
       </div>
 
@@ -1575,14 +1575,23 @@
       bukaScannerUntukAksi(aksi, currentUser.idPerangkat, '');
     }
 
-    function klikTugasLuar() {
+    async function klikTugasLuar() {
       const ket = document.getElementById('ketTugasLuar').value.trim();
+      const fotoInput = document.getElementById('fotoTugasLuar');
+      const file = fotoInput && fotoInput.files && fotoInput.files[0] ? fotoInput.files[0] : null;
       const logToday = currentDashboard && currentDashboard.logHariIni;
       const aksi = logToday && logToday.jenis === 'Tugas Luar' && !logToday.jamKeluar
         ? 'TUGAS_LUAR_KELUAR'
         : 'TUGAS_LUAR_MASUK';
-      ambilLokasiDanKirim(currentUser.idPerangkat, aksi, ket, '');
-      document.getElementById('ketTugasLuar').value = '';
+
+      try {
+        const lampiran = await siapkanLampiranFile(file);
+        ambilLokasiDanKirim(currentUser.idPerangkat, aksi, ket, '', lampiran);
+        document.getElementById('ketTugasLuar').value = '';
+        if (fotoInput) fotoInput.value = '';
+      } catch (err) {
+        showToast(err.message || 'Gagal menyiapkan foto kegiatan.');
+      }
     }
 
     async function klikSakitIzin(aksi) {
