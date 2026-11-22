@@ -433,6 +433,38 @@
       margin-bottom: 6px;
       color: var(--text);
     }
+    .camera-trigger-box {
+      border: 1px dashed #9ca3af;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 8px;
+      background: #fafafa;
+    }
+    .btn-kamera-foto {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #1f2937;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-kamera-foto:active {
+      background: #f3f4f6;
+    }
+    .foto-status-text {
+      font-size: 11px;
+      color: #4b5563;
+      margin-top: 6px;
+      text-align: center;
+      font-weight: 600;
+    }
     .btn-action {
       width: 100%;
       padding: 13px 16px;
@@ -524,8 +556,8 @@
       text-align: center;
     }
     .validator-preview-box img {
-      max-width: 100%;
-      max-height: 240px;
+      width: 100%;
+      max-height: 320px;
       border-radius: 6px;
       object-fit: contain;
       border: 1px solid #d1d5db;
@@ -820,7 +852,7 @@
           style="margin-bottom:8px;"
           onclick="document.getElementById('inputFotoQr').click()"
         >
-          📷 Ambil Foto Kode (Kamera HP)
+          📷 Ambil Foto/Gambar Kode
         </button>
         <button type="button" class="btn-action btn-gray" style="cursor:pointer;" onclick="tutupScannerModal()">Batal & Tutup Kamera</button>
       </div>
@@ -921,36 +953,40 @@
       <div class="action-group">
         <div class="action-label">Absen Tugas Luar</div>
         <input type="text" id="ketTugasLuar" class="form-control" placeholder="Keterangan tugas luar / tujuan dinas..." style="margin-bottom:8px;" />
-        <label for="fotoTugasLuar" style="display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px;">
-          Unggah Bukti Dukung (Kamera + Timestamp & Koordinat)
-        </label>
-        <input
-          type="file"
-          id="fotoTugasLuar"
-          class="form-control"
-          accept="image/*"
-          capture="environment"
-          required
-          style="margin-bottom:8px; padding:8px; font-size:12px;"
-        />
+        <div class="camera-trigger-box">
+          <input
+            type="file"
+            id="fotoTugasLuar"
+            accept="image/*"
+            capture="environment"
+            style="display:none;"
+            onchange="updateStatusFoto('fotoTugasLuar', 'statusFotoTugasLuar')"
+          />
+          <button type="button" class="btn-kamera-foto" onclick="document.getElementById('fotoTugasLuar').click()">
+            📷 Ambil Foto/Gambar
+          </button>
+          <div id="statusFotoTugasLuar" class="foto-status-text">Belum ada foto diambil (Kamera + Timestamp & Koordinat)</div>
+        </div>
         <button id="btnTugasLuar" class="btn-action btn-red" onclick="klikTugasLuar()">Tugas Luar</button>
       </div>
 
       <div class="action-group">
         <div class="action-label">Absen Sakit / Izin</div>
         <input type="text" id="ketSakitIzin" class="form-control" placeholder="Keterangan sakit atau izin..." style="margin-bottom:8px;" />
-        <label for="lampiranSakitIzin" style="display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px;">
-          Unggah Bukti Dukung (Kamera + Timestamp & Koordinat)
-        </label>
-        <input
-          type="file"
-          id="lampiranSakitIzin"
-          class="form-control"
-          accept="image/*"
-          capture="environment"
-          required
-          style="margin-bottom:8px; padding:8px; font-size:12px;"
-        />
+        <div class="camera-trigger-box">
+          <input
+            type="file"
+            id="lampiranSakitIzin"
+            accept="image/*"
+            capture="environment"
+            style="display:none;"
+            onchange="updateStatusFoto('lampiranSakitIzin', 'statusFotoSakitIzin')"
+          />
+          <button type="button" class="btn-kamera-foto" onclick="document.getElementById('lampiranSakitIzin').click()">
+            📷 Ambil Foto/Gambar
+          </button>
+          <div id="statusFotoSakitIzin" class="foto-status-text">Belum ada foto diambil (Kamera + Timestamp & Koordinat)</div>
+        </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
           <button id="btnSakit" class="btn-action btn-red" onclick="klikSakitIzin('SAKIT')">Sakit</button>
           <button id="btnIzin" class="btn-action btn-red" onclick="klikSakitIzin('IZIN')">Izin</button>
@@ -1105,6 +1141,16 @@
     let html5QrCode = null;
     let isScanning = false;
     let aksiScannerAktif = { aksi: 'MASUK', targetIdPerangkat: '', keterangan: '' };
+
+    function updateStatusFoto(inputId, labelId) {
+      const inp = document.getElementById(inputId);
+      const lbl = document.getElementById(labelId);
+      if (!lbl) return;
+      const f = inp && inp.files && inp.files[0] ? inp.files[0] : null;
+      lbl.textContent = f
+        ? `✓ Foto siap: ${f.name || 'hasil_kamera.jpg'}`
+        : 'Belum ada foto diambil (Kamera + Timestamp & Koordinat)';
+    }
 
     function sinkronkanIconAplikasi(urlLogo) {
       if (!urlLogo || !urlLogo.trim()) return;
@@ -1400,7 +1446,7 @@
           btnHarian.textContent = 'Absen Masuk (Scan)';
           btnHarian.classList.add('btn-red');
         } else {
-          btnHarian.textContent = 'Absen Masuk Aktif Jam 06:00';
+          btnHarian.textContent = ctrl.teksTombol || 'Waktu Absen Masuk Telah Berakhir';
           btnHarian.classList.add('btn-gray');
           btnHarian.disabled = true;
         }
@@ -1508,7 +1554,7 @@
         reader.onload = () => {
           const img = new Image();
           img.onload = () => {
-            const maxDim = 560;
+            const maxDim = 900;
             let w = img.width;
             let h = img.height;
             if (w > maxDim || h > maxDim) {
@@ -1517,31 +1563,33 @@
               h = Math.round(h * r);
             }
 
-            const barHeight = 44;
+            const barHeight = 52;
             const canvas = document.createElement('canvas');
             canvas.width = w;
             canvas.height = h + barHeight;
             const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
 
             ctx.fillStyle = '#111827';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0, w, h);
 
-            ctx.fillStyle = 'rgba(17, 24, 39, 0.92)';
+            ctx.fillStyle = 'rgba(17, 24, 39, 0.94)';
             ctx.fillRect(0, h, w, barHeight);
 
             const waktuStr = formatTimestampKamera_(new Date());
             const koordStr = coordsInfo && coordsInfo.label ? coordsInfo.label : 'Lokasi tidak aktif';
 
             ctx.fillStyle = '#facc15';
-            ctx.font = 'bold 11px sans-serif';
-            ctx.fillText(`🕒 ${waktuStr}`, 8, h + 17);
+            ctx.font = 'bold 13px sans-serif';
+            ctx.fillText(`🕒 ${waktuStr}`, 10, h + 20);
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = '10px sans-serif';
-            ctx.fillText(`📍 Koordinat: ${koordStr}`, 8, h + 34);
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillText(`📍 Koordinat: ${koordStr}`, 10, h + 40);
 
-            const previewDataUrl = canvas.toDataURL('image/jpeg', 0.55);
+            const previewDataUrl = canvas.toDataURL('image/jpeg', 0.78);
             const base64 = previewDataUrl.split(',')[1] || '';
             resolve({
               base64,
@@ -1749,7 +1797,7 @@
         statusEl.textContent = 'Kamera aktif — arahkan ke barcode / QR absen kantor desa.';
       } catch (err) {
         isScanning = false;
-        statusEl.textContent = 'Kamera live gagal dibuka. Gunakan tombol "Ambil Foto Kode (Kamera HP)" di bawah.';
+        statusEl.textContent = 'Kamera live gagal dibuka. Gunakan tombol "Ambil Foto/Gambar Kode" di bawah.';
         showToast('Akses kamera live gagal: ' + (err.message || err));
       }
     }
@@ -1766,7 +1814,7 @@
       const file = fotoInput && fotoInput.files && fotoInput.files[0] ? fotoInput.files[0] : null;
 
       if (!file) {
-        showToast('Ambil foto bukti dukung tugas luar melalui kamera terlebih dahulu.');
+        showToast('Tekan "Ambil Foto/Gambar" bukti tugas luar terlebih dahulu.');
         return;
       }
 
@@ -1774,12 +1822,13 @@
       const aksi = logToday && logToday.jenis === 'Tugas Luar' && !logToday.jamKeluar ? 'TUGAS_LUAR_KELUAR' : 'TUGAS_LUAR_MASUK';
 
       try {
-        showToast('Menambahkan timestamp & koordinat foto...');
+        showToast('Menyiapkan foto tajam, timestamp & koordinat...');
         const coordsInfo = await dapatkanKoordinatSaatIni_();
         const lampiran = await siapkanLampiranFile(file, coordsInfo);
         ambilLokasiDanKirim(currentUser.idPerangkat, aksi, ket, '', lampiran, coordsInfo);
         document.getElementById('ketTugasLuar').value = '';
         if (fotoInput) fotoInput.value = '';
+        updateStatusFoto('fotoTugasLuar', 'statusFotoTugasLuar');
       } catch (err) {
         showToast(err.message || 'Gagal menyiapkan bukti foto tugas luar.');
       }
@@ -1791,17 +1840,18 @@
       const file = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
 
       if (!file) {
-        showToast(`Ambil foto bukti dukung ${aksi === 'SAKIT' ? 'sakit' : 'izin'} melalui kamera terlebih dahulu.`);
+        showToast(`Tekan "Ambil Foto/Gambar" bukti ${aksi === 'SAKIT' ? 'sakit' : 'izin'} terlebih dahulu.`);
         return;
       }
 
       try {
-        showToast('Menambahkan timestamp & koordinat foto...');
+        showToast('Menyiapkan foto tajam, timestamp & koordinat...');
         const coordsInfo = await dapatkanKoordinatSaatIni_();
         const lampiran = await siapkanLampiranFile(file, coordsInfo);
         ambilLokasiDanKirim(currentUser.idPerangkat, aksi, ket, '', lampiran, coordsInfo);
         document.getElementById('ketSakitIzin').value = '';
         if (fileInput) fileInput.value = '';
+        updateStatusFoto('lampiranSakitIzin', 'statusFotoSakitIzin');
       } catch (err) {
         showToast(err.message || 'Gagal menyiapkan bukti foto.');
       }
