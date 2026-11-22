@@ -1519,32 +1519,92 @@
         const data = await resp.json();
         const addr = (data && data.address) || {};
 
-        const namaTempat =
-          (data && data.name && String(data.name).trim()) ||
+        let namaTempat = String(
+          (data && data.name) ||
           addr.amenity ||
           addr.building ||
           addr.office ||
           addr.shop ||
-          addr.road ||
-          '';
+          ''
+        ).trim();
 
-        const desa =
+        let jalan = String(
+          addr.road ||
+          addr.street ||
+          addr.pedestrian ||
+          addr.footway ||
+          addr.path ||
+          ''
+        ).trim();
+
+        let desa = String(
           addr.village ||
           addr.suburb ||
           addr.hamlet ||
           addr.neighbourhood ||
-          '';
+          ''
+        ).trim();
 
-        const kec = addr.city_district || addr.district || addr.county || '';
-        const kab = addr.city || addr.state_district || addr.state || '';
+        let kec = String(
+          addr.city_district ||
+          addr.district ||
+          addr.municipality ||
+          addr.county ||
+          ''
+        ).trim();
+
+        let kab = String(
+          addr.county ||
+          addr.state_district ||
+          addr.city ||
+          addr.regency ||
+          ''
+        ).trim();
+
+        desa = desa.replace(/^(desa|ds\.?|kelurahan|kel\.?)\s+/i, '').trim();
+        kec = kec.replace(/^(kecamatan|kec\.?)\s+/i, '').trim();
+        kab = kab.replace(/^(kabupaten|kab\.?|kota)\s+/i, '').trim();
+
+        const gabunganCek = `${namaTempat} ${jalan} ${desa} ${kec} ${kab}`.toLowerCase();
+        if (
+          gabunganCek.indexOf('atinggola') !== -1 ||
+          gabunganCek.indexOf('monggupo') !== -1 ||
+          gabunganCek.indexOf('mopangga') !== -1
+        ) {
+          if (!kec || kec.toLowerCase() === 'gorontalo utara') {
+            kec = 'Atinggola';
+          }
+          if (!kab || kab.toLowerCase() === 'atinggola') {
+            kab = 'Gorontalo Utara';
+          }
+        }
+
+        if (kec && kab && kec.toLowerCase() === kab.toLowerCase()) {
+          kec = '';
+        }
+
+        if (namaTempat && jalan && namaTempat.toLowerCase() === jalan.toLowerCase()) {
+          namaTempat = '';
+        }
 
         const bagian = [];
-        if (namaTempat) bagian.push(namaTempat);
-        if (desa && bagian.indexOf(desa) === -1) bagian.push(`Ds. ${desa}`);
-        if (kec && bagian.indexOf(kec) === -1) bagian.push(`Kec. ${kec}`);
-        if (!desa && !kec && kab) bagian.push(kab);
+        if (namaTempat && namaTempat.toLowerCase() !== desa.toLowerCase()) {
+          bagian.push(namaTempat);
+        }
+        if (jalan && jalan.toLowerCase() !== desa.toLowerCase()) {
+          bagian.push(/^jl\.?\s+/i.test(jalan) ? jalan : `Jl. ${jalan}`);
+        }
+        if (desa) {
+          bagian.push(`Ds. ${desa}`);
+        }
+        if (kec) {
+          bagian.push(`Kec. ${kec}`);
+        }
+        if (kab) {
+          bagian.push(`Kab. ${kab}`);
+        }
 
-        return bagian.slice(0, 3).join(', ');
+        return bagian.join(', ');
       } catch (e) {
         return '';
       }
@@ -1610,7 +1670,7 @@
             }
 
             const alamatTeks = coordsInfo && coordsInfo.alamat ? coordsInfo.alamat : '';
-            const barHeight = alamatTeks ? 88 : 66;
+            const barHeight = alamatTeks ? 90 : 66;
             const canvas = document.createElement('canvas');
             canvas.width = w;
             canvas.height = h + barHeight;
@@ -1638,8 +1698,8 @@
 
             if (alamatTeks) {
               ctx.fillStyle = '#86efac';
-              ctx.font = 'bold 14px sans-serif';
-              ctx.fillText(`🗺️ ${alamatTeks.slice(0, 72)}`, 12, h + 71);
+              ctx.font = 'bold 13.5px sans-serif';
+              ctx.fillText(`🗺️ ${alamatTeks.slice(0, 74)}`, 12, h + 71);
             }
 
             const previewDataUrl = canvas.toDataURL('image/jpeg', 0.78);
