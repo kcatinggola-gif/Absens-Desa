@@ -907,14 +907,13 @@
         <div class="action-label">Absen Tugas Luar</div>
         <input type="text" id="ketTugasLuar" class="form-control" placeholder="Keterangan tugas luar / tujuan dinas..." style="margin-bottom:8px;" />
         <label for="fotoTugasLuar" style="display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px;">
-          Unggah Foto Kegiatan Tugas Luar (Wajib - Gambar)
+          Unggah Foto Kegiatan Tugas Luar (Wajib - Gambar / Folder)
         </label>
         <input
           type="file"
           id="fotoTugasLuar"
           class="form-control"
           accept="image/*"
-          capture="environment"
           required
           style="margin-bottom:8px; padding:8px; font-size:12px;"
         />
@@ -1146,7 +1145,7 @@
         const timeout = setTimeout(() => {
           cleanup();
           reject(new Error('Waktu habis menghubungi server Apps Script.'));
-        }, 15000);
+        }, 20000);
 
         function cleanup() {
           clearTimeout(timeout);
@@ -1167,10 +1166,17 @@
           callback: cbName
         });
 
-        script.src = `${GAS_WEBAPP_URL}?${query.toString()}`;
+        const fullUrl = `${GAS_WEBAPP_URL}?${query.toString()}`;
+        if (fullUrl.length > 60000) {
+          cleanup();
+          reject(new Error('Ukuran data lampiran terlalu besar. Pilih file atau foto yang lebih kecil.'));
+          return;
+        }
+
+        script.src = fullUrl;
         script.onerror = () => {
           cleanup();
-          reject(new Error('Gagal terhubung ke Web App Google Apps Script.'));
+          reject(new Error('Koneksi terputus atau data lampiran terlalu besar untuk dikirim ke Web App Apps Script.'));
         };
 
         document.body.appendChild(script);
@@ -1437,9 +1443,9 @@
           resolve(null);
           return;
         }
-        const maxBytes = 4 * 1024 * 1024;
+        const maxBytes = 2.5 * 1024 * 1024;
         if (file.size > maxBytes && !String(file.type || '').startsWith('image/')) {
-          reject(new Error('Ukuran berkas maksimal 4 MB.'));
+          reject(new Error('Ukuran berkas maksimal 2.5 MB.'));
           return;
         }
 
@@ -1448,7 +1454,7 @@
           reader.onload = () => {
             const img = new Image();
             img.onload = () => {
-              const maxDim = 1280;
+              const maxDim = 900;
               let w = img.width;
               let h = img.height;
               if (w > maxDim || h > maxDim) {
@@ -1461,7 +1467,7 @@
               canvas.height = h;
               const ctx = canvas.getContext('2d');
               ctx.drawImage(img, 0, 0, w, h);
-              const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
               const base64 = dataUrl.split(',')[1] || '';
               resolve({
                 base64,
