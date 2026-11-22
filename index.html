@@ -965,7 +965,7 @@
           <button type="button" class="btn-kamera-foto" onclick="document.getElementById('fotoTugasLuar').click()">
             📷 Ambil Foto/Gambar
           </button>
-          <div id="statusFotoTugasLuar" class="foto-status-text">Belum ada foto diambil (Kamera + Timestamp & Koordinat)</div>
+          <div id="statusFotoTugasLuar" class="foto-status-text">Belum ada foto diambil (Kamera + Timestamp, Lokasi & Koordinat)</div>
         </div>
         <button id="btnTugasLuar" class="btn-action btn-red" onclick="klikTugasLuar()">Tugas Luar</button>
       </div>
@@ -985,7 +985,7 @@
           <button type="button" class="btn-kamera-foto" onclick="document.getElementById('lampiranSakitIzin').click()">
             📷 Ambil Foto/Gambar
           </button>
-          <div id="statusFotoSakitIzin" class="foto-status-text">Belum ada foto diambil (Kamera + Timestamp & Koordinat)</div>
+          <div id="statusFotoSakitIzin" class="foto-status-text">Belum ada foto diambil (Kamera + Timestamp, Lokasi & Koordinat)</div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
           <button id="btnSakit" class="btn-action btn-red" onclick="klikSakitIzin('SAKIT')">Sakit</button>
@@ -1149,7 +1149,7 @@
       const f = inp && inp.files && inp.files[0] ? inp.files[0] : null;
       lbl.textContent = f
         ? `✓ Foto siap: ${f.name || 'hasil_kamera.jpg'}`
-        : 'Belum ada foto diambil (Kamera + Timestamp & Koordinat)';
+        : 'Belum ada foto diambil (Kamera + Timestamp, Lokasi & Koordinat)';
     }
 
     function sinkronkanIconAplikasi(urlLogo) {
@@ -1446,7 +1446,7 @@
           btnHarian.textContent = 'Absen Masuk (Scan)';
           btnHarian.classList.add('btn-red');
         } else {
-          btnHarian.textContent = ctrl.teksTombol || 'Waktu Absen Masuk Telah Berakhir';
+          btnHarian.textContent = ctrl.teksTombol || 'Waktu Absen Masuk Telah Berakhir (Terkunci)';
           btnHarian.classList.add('btn-gray');
           btnHarian.disabled = true;
         }
@@ -1507,24 +1507,71 @@
         .join('');
     }
 
+    async function dapatkanNamaLokasiDetail_(lat, lng) {
+      if (lat === null || lng === null || isNaN(Number(lat)) || isNaN(Number(lng))) {
+        return '';
+      }
+      try {
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&zoom=18&addressdetails=1&accept-language=id`;
+        const resp = await fetch(url, {
+          headers: { 'Accept': 'application/json' }
+        });
+        if (!resp.ok) return '';
+        const data = await resp.json();
+        const addr = (data && data.address) || {};
+
+        const namaTempat =
+          (data && data.name && String(data.name).trim()) ||
+          addr.amenity ||
+          addr.building ||
+          addr.office ||
+          addr.shop ||
+          addr.road ||
+          '';
+
+        const desa =
+          addr.village ||
+          addr.suburb ||
+          addr.hamlet ||
+          addr.neighbourhood ||
+          '';
+
+        const kec = addr.city_district || addr.district || addr.county || '';
+        const kab = addr.city || addr.state_district || addr.state || '';
+
+        const bagian = [];
+        if (namaTempat) bagian.push(namaTempat);
+        if (desa && bagian.indexOf(desa) === -1) bagian.push(`Ds. ${desa}`);
+        if (kec && bagian.indexOf(kec) === -1) bagian.push(`Kec. ${kec}`);
+        if (!desa && !kec && kab) bagian.push(kab);
+
+        return bagian.slice(0, 3).join(', ');
+      } catch (e) {
+        return '';
+      }
+    }
+
     function dapatkanKoordinatSaatIni_() {
       return new Promise((resolve) => {
         if (!navigator.geolocation) {
-          resolve({ lat: null, lng: null, label: 'GPS tidak tersedia' });
+          resolve({ lat: null, lng: null, label: 'GPS tidak tersedia', alamat: '' });
           return;
         }
         navigator.geolocation.getCurrentPosition(
-          (pos) => {
+          async (pos) => {
             const lat = pos.coords.latitude;
             const lng = pos.coords.longitude;
+            const koordStr = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            const alamat = await dapatkanNamaLokasiDetail_(lat, lng);
             resolve({
               lat,
               lng,
-              label: `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+              label: koordStr,
+              alamat
             });
           },
-          () => resolve({ lat: null, lng: null, label: 'Lokasi tidak aktif' }),
-          { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+          () => resolve({ lat: null, lng: null, label: 'Lokasi tidak aktif', alamat: '' }),
+          { enableHighAccuracy: true, timeout: 9000, maximumAge: 0 }
         );
       });
     }
@@ -1563,7 +1610,8 @@
               h = Math.round(h * r);
             }
 
-            const barHeight = 52;
+            const alamatTeks = coordsInfo && coordsInfo.alamat ? coordsInfo.alamat : '';
+            const barHeight = alamatTeks ? 88 : 66;
             const canvas = document.createElement('canvas');
             canvas.width = w;
             canvas.height = h + barHeight;
@@ -1575,19 +1623,25 @@
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0, w, h);
 
-            ctx.fillStyle = 'rgba(17, 24, 39, 0.94)';
+            ctx.fillStyle = 'rgba(17, 24, 39, 0.95)';
             ctx.fillRect(0, h, w, barHeight);
 
             const waktuStr = formatTimestampKamera_(new Date());
             const koordStr = coordsInfo && coordsInfo.label ? coordsInfo.label : 'Lokasi tidak aktif';
 
             ctx.fillStyle = '#facc15';
-            ctx.font = 'bold 13px sans-serif';
-            ctx.fillText(`🕒 ${waktuStr}`, 10, h + 20);
+            ctx.font = 'bold 17px sans-serif';
+            ctx.fillText(`🕒 ${waktuStr}`, 12, h + 24);
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 12px sans-serif';
-            ctx.fillText(`📍 Koordinat: ${koordStr}`, 10, h + 40);
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillText(`📍 Koordinat: ${koordStr}`, 12, h + 47);
+
+            if (alamatTeks) {
+              ctx.fillStyle = '#86efac';
+              ctx.font = 'bold 14px sans-serif';
+              ctx.fillText(`🗺️ ${alamatTeks.slice(0, 72)}`, 12, h + 71);
+            }
 
             const previewDataUrl = canvas.toDataURL('image/jpeg', 0.78);
             const base64 = previewDataUrl.split(',')[1] || '';
@@ -1597,7 +1651,8 @@
               mimeType: 'image/jpeg',
               fileName: 'bukti_timestamp.jpg',
               lat: coordsInfo ? coordsInfo.lat : null,
-              lng: coordsInfo ? coordsInfo.lng : null
+              lng: coordsInfo ? coordsInfo.lng : null,
+              alamat: alamatTeks
             });
           };
           img.onerror = () => reject(new Error('Gagal memproses foto dari kamera.'));
@@ -1822,7 +1877,7 @@
       const aksi = logToday && logToday.jenis === 'Tugas Luar' && !logToday.jamKeluar ? 'TUGAS_LUAR_KELUAR' : 'TUGAS_LUAR_MASUK';
 
       try {
-        showToast('Menyiapkan foto tajam, timestamp & koordinat...');
+        showToast('Mengambil detail lokasi & menyiapkan foto...');
         const coordsInfo = await dapatkanKoordinatSaatIni_();
         const lampiran = await siapkanLampiranFile(file, coordsInfo);
         ambilLokasiDanKirim(currentUser.idPerangkat, aksi, ket, '', lampiran, coordsInfo);
@@ -1845,7 +1900,7 @@
       }
 
       try {
-        showToast('Menyiapkan foto tajam, timestamp & koordinat...');
+        showToast('Mengambil detail lokasi & menyiapkan foto...');
         const coordsInfo = await dapatkanKoordinatSaatIni_();
         const lampiran = await siapkanLampiranFile(file, coordsInfo);
         ambilLokasiDanKirim(currentUser.idPerangkat, aksi, ket, '', lampiran, coordsInfo);
@@ -2201,7 +2256,7 @@
             const matchPreview = rawKet.match(/BuktiPreview:\s*(data:image\/[^|\s]+)/i);
             const previewHtml = matchPreview
               ? `<div class="validator-preview-box">
-                   <div style="font-size:11px; font-weight:700; color:#374151; margin-bottom:6px;">Preview Bukti Dukung (Timestamp & Koordinat)</div>
+                   <div style="font-size:11px; font-weight:700; color:#374151; margin-bottom:6px;">Preview Bukti Dukung (Timestamp, Lokasi & Koordinat)</div>
                    <img src="${matchPreview[1]}" alt="Preview Bukti Dukung" />
                  </div>`
               : '';
