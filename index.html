@@ -515,6 +515,21 @@
       margin-top: 6px;
       color: #374151;
     }
+    .validator-preview-box {
+      margin: 8px 0 10px;
+      padding: 8px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #f9fafb;
+      text-align: center;
+    }
+    .validator-preview-box img {
+      max-width: 100%;
+      max-height: 220px;
+      border-radius: 6px;
+      object-fit: contain;
+      border: 1px solid #d1d5db;
+    }
     .rekap-item {
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -907,7 +922,7 @@
         <div class="action-label">Absen Tugas Luar</div>
         <input type="text" id="ketTugasLuar" class="form-control" placeholder="Keterangan tugas luar / tujuan dinas..." style="margin-bottom:8px;" />
         <label for="fotoTugasLuar" style="display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px;">
-          Unggah Foto Kegiatan Tugas Luar (Wajib - Gambar / Folder)
+          Bukti Foto Kegiatan Tugas Luar (Folder / Galeri / Kamera - Preview Validator)
         </label>
         <input
           type="file"
@@ -924,7 +939,7 @@
         <div class="action-label">Absen Sakit / Izin</div>
         <input type="text" id="ketSakitIzin" class="form-control" placeholder="Keterangan sakit atau izin..." style="margin-bottom:8px;" />
         <label for="lampiranSakitIzin" style="display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px;">
-          Unggah Surat Dokter / Foto Bukti (Wajib - Gambar/PDF)
+          Bukti Surat / Foto Ketidakhadiran (Folder / Galeri / Kamera - Preview Validator)
         </label>
         <input
           type="file"
@@ -1133,13 +1148,27 @@
       aksiScannerAktif = { aksi, targetIdPerangkat, keterangan };
     }
 
-    function runServer(fnName, ...args) {
-      return new Promise((resolve, reject) => {
-        if (!GAS_WEBAPP_URL || GAS_WEBAPP_URL.indexOf('GANTI_DENGAN_DEPLOYMENT_ID_ANDA') !== -1) {
-          reject(new Error('URL Web App Google Apps Script belum diisi pada GAS_WEBAPP_URL.'));
-          return;
-        }
+    async function runServer(fnName, ...args) {
+      if (!GAS_WEBAPP_URL || GAS_WEBAPP_URL.indexOf('GANTI_DENGAN_DEPLOYMENT_ID_ANDA') !== -1) {
+        throw new Error('URL Web App Google Apps Script belum diisi pada GAS_WEBAPP_URL.');
+      }
 
+      if (fnName === 'prosesAbsensi') {
+        const formData = new URLSearchParams();
+        formData.append('action', fnName);
+        formData.append('args', JSON.stringify(args));
+
+        const resp = await fetch(GAS_WEBAPP_URL, {
+          method: 'POST',
+          body: formData
+        });
+        if (!resp.ok) {
+          throw new Error('Respon server tidak normal (' + resp.status + ').');
+        }
+        return await resp.json();
+      }
+
+      return new Promise((resolve, reject) => {
         const cbName = 'absenCb_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
         const script = document.createElement('script');
         const timeout = setTimeout(() => {
@@ -1166,17 +1195,10 @@
           callback: cbName
         });
 
-        const fullUrl = `${GAS_WEBAPP_URL}?${query.toString()}`;
-        if (fullUrl.length > 60000) {
-          cleanup();
-          reject(new Error('Ukuran data lampiran terlalu besar. Pilih file atau foto yang lebih kecil.'));
-          return;
-        }
-
-        script.src = fullUrl;
+        script.src = `${GAS_WEBAPP_URL}?${query.toString()}`;
         script.onerror = () => {
           cleanup();
-          reject(new Error('Koneksi terputus atau data lampiran terlalu besar untuk dikirim ke Web App Apps Script.'));
+          reject(new Error('Gagal terhubung ke Web App Google Apps Script.'));
         };
 
         document.body.appendChild(script);
@@ -1443,18 +1465,13 @@
           resolve(null);
           return;
         }
-        const maxBytes = 2.5 * 1024 * 1024;
-        if (file.size > maxBytes && !String(file.type || '').startsWith('image/')) {
-          reject(new Error('Ukuran berkas maksimal 2.5 MB.'));
-          return;
-        }
 
         if (String(file.type || '').startsWith('image/')) {
           const reader = new FileReader();
           reader.onload = () => {
             const img = new Image();
             img.onload = () => {
-              const maxDim = 900;
+              const maxDim = 480;
               let w = img.width;
               let h = img.height;
               if (w > maxDim || h > maxDim) {
@@ -1467,10 +1484,11 @@
               canvas.height = h;
               const ctx = canvas.getContext('2d');
               ctx.drawImage(img, 0, 0, w, h);
-              const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-              const base64 = dataUrl.split(',')[1] || '';
+              const previewDataUrl = canvas.toDataURL('image/jpeg', 0.5);
+              const base64 = previewDataUrl.split(',')[1] || '';
               resolve({
                 base64,
+                previewDataUrl,
                 mimeType: 'image/jpeg',
                 fileName: (file.name || 'bukti').replace(/\.[^.]+$/, '') + '.jpg'
               });
@@ -1483,12 +1501,18 @@
           return;
         }
 
+        if (file.size > 900 * 1024) {
+          reject(new Error('Ukuran dokumen terlalu besar. Gunakan foto/gambar agar langsung tampil di preview validator.'));
+          return;
+        }
+
         const reader = new FileReader();
         reader.onload = () => {
           const resStr = String(reader.result || '');
           const base64 = resStr.split(',')[1] || '';
           resolve({
             base64,
+            previewDataUrl: '',
             mimeType: file.type || 'application/octet-stream',
             fileName: file.name || 'dokumen'
           });
@@ -1699,7 +1723,7 @@
       const file = fotoInput && fotoInput.files && fotoInput.files[0] ? fotoInput.files[0] : null;
 
       if (!file) {
-        showToast('Foto kegiatan tugas luar wajib diunggah.');
+        showToast('Bukti foto kegiatan tugas luar wajib dipilih.');
         return;
       }
 
@@ -1712,7 +1736,7 @@
         document.getElementById('ketTugasLuar').value = '';
         if (fotoInput) fotoInput.value = '';
       } catch (err) {
-        showToast(err.message || 'Gagal menyiapkan foto kegiatan.');
+        showToast(err.message || 'Gagal menyiapkan bukti tugas luar.');
       }
     }
 
@@ -1722,7 +1746,7 @@
       const file = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
 
       if (!file) {
-        showToast(`Surat/bukti ${aksi === 'SAKIT' ? 'sakit' : 'izin'} wajib diunggah.`);
+        showToast(`Bukti ${aksi === 'SAKIT' ? 'sakit' : 'izin'} wajib dipilih.`);
         return;
       }
 
@@ -1732,7 +1756,7 @@
         document.getElementById('ketSakitIzin').value = '';
         if (fileInput) fileInput.value = '';
       } catch (err) {
-        showToast(err.message || 'Gagal menyiapkan lampiran.');
+        showToast(err.message || 'Gagal menyiapkan bukti.');
       }
     }
 
@@ -2075,8 +2099,21 @@
           return;
         }
         wrap.innerHTML = items
-          .map(
-            (it) => `
+          .map((it) => {
+            const rawKet = String(it.keterangan || '');
+            const matchPreview = rawKet.match(/BuktiPreview:\s*(data:image\/[^|\s]+)/i);
+            const previewHtml = matchPreview
+              ? `<div class="validator-preview-box">
+                   <div style="font-size:11px; font-weight:700; color:#374151; margin-bottom:6px;">Preview Bukti Konfirmasi</div>
+                   <img src="${matchPreview[1]}" alt="Preview Bukti" />
+                 </div>`
+              : '';
+            const ketBersih = rawKet
+              .replace(/\|?\s*BuktiPreview:\s*data:image\/[^|\s]+/gi, '')
+              .replace(/^\s*\|\s*|\s*\|\s*$/g, '')
+              .trim();
+
+            return `
             <div class="log-card">
               <div class="log-top">
                 <span>${it.namaLengkap} (${it.jenis})</span>
@@ -2085,13 +2122,14 @@
               <div style="font-size:12px; margin-bottom:6px;">
                 Masuk: <b>${it.jamMasuk || '-'}</b> | Keluar: <b>${it.jamKeluar || '-'}</b> | Skor: <b>${it.skorMasuk + it.skorKeluar}</b>
               </div>
-              ${it.keterangan ? `<div style="font-size:11px; color:#374151; margin-bottom:8px; word-break:break-all;">Ket: ${it.keterangan}</div>` : ''}
+              ${ketBersih ? `<div style="font-size:11px; color:#374151; margin-bottom:6px;">Ket: ${ketBersih}</div>` : ''}
+              ${previewHtml}
               <div style="display:flex; gap:8px;">
                 <button class="btn-sm" style="background:var(--success);" onclick="aksiValidasi('${it.idLog}', 'VALID')">Setujui (Valid)</button>
                 <button class="btn-sm" style="background:var(--danger);" onclick="aksiValidasi('${it.idLog}', 'DITOLAK')">Tolak</button>
               </div>
-            </div>`
-          )
+            </div>`;
+          })
           .join('');
       } catch (err) {
         showToast('Gagal memuat validasi: ' + err.message);
