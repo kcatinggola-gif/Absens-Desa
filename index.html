@@ -951,7 +951,7 @@
       </div>
 
       <div class="action-group">
-        <div class="action-label">Absen Tugas Luar</div>
+        <div class="action-label">Absen Tugas Luar (Sekali Kirim)</div>
         <input type="text" id="ketTugasLuar" class="form-control" placeholder="Keterangan tugas luar / tujuan dinas..." style="margin-bottom:8px;" />
         <div class="camera-trigger-box">
           <input
@@ -1024,8 +1024,7 @@
           <select id="temanJenis" class="form-control">
             <option value="MASUK">Absen Masuk Harian</option>
             <option value="KELUAR">Absen Keluar Harian</option>
-            <option value="TUGAS_LUAR_MASUK">Tugas Luar (Masuk)</option>
-            <option value="TUGAS_LUAR_KELUAR">Tugas Luar (Keluar)</option>
+            <option value="TUGAS_LUAR">Tugas Luar</option>
             <option value="SAKIT">Sakit</option>
             <option value="IZIN">Izin</option>
           </select>
@@ -1483,7 +1482,7 @@
       wrap.innerHTML = items
         .map((it) => {
           const icoMasuk = getStatusBadge(it.statusValidasi, Boolean(it.jamMasuk));
-          const icoKeluar = getStatusBadge(it.statusValidasi, Boolean(it.jamKeluar));
+          const icoKeluar = getStatusBadge(it.statusValidasi, Boolean(it.jamKeluar && it.jamKeluar !== '-'));
           return `
             <div class="log-card">
               <div class="log-top">
@@ -1492,7 +1491,7 @@
               </div>
               <div class="log-cols">
                 <div style="flex:1;">
-                  <div class="log-col-title">Masuk</div>
+                  <div class="log-col-title">Masuk / Unggah</div>
                   ${icoMasuk}
                   <div class="log-time">${it.jamMasuk || '-'}</div>
                 </div>
@@ -1873,14 +1872,11 @@
         return;
       }
 
-      const logToday = currentDashboard && currentDashboard.logHariIni;
-      const aksi = logToday && logToday.jenis === 'Tugas Luar' && !logToday.jamKeluar ? 'TUGAS_LUAR_KELUAR' : 'TUGAS_LUAR_MASUK';
-
       try {
         showToast('Mengambil detail lokasi & menyiapkan foto...');
         const coordsInfo = await dapatkanKoordinatSaatIni_();
         const lampiran = await siapkanLampiranFile(file, coordsInfo);
-        ambilLokasiDanKirim(currentUser.idPerangkat, aksi, ket, '', lampiran, coordsInfo);
+        ambilLokasiDanKirim(currentUser.idPerangkat, 'TUGAS_LUAR', ket, '', lampiran, coordsInfo);
         document.getElementById('ketTugasLuar').value = '';
         if (fotoInput) fotoInput.value = '';
         updateStatusFoto('fotoTugasLuar', 'statusFotoTugasLuar');
@@ -2272,7 +2268,7 @@
                 <span>${it.tanggal}</span>
               </div>
               <div style="font-size:12px; margin-bottom:6px;">
-                Masuk: <b>${it.jamMasuk || '-'}</b> | Keluar: <b>${it.jamKeluar || '-'}</b> | Skor: <b>${it.skorMasuk + it.skorKeluar}</b>
+                Jam: <b>${it.jamMasuk || '-'}</b> | Skor: <b>${it.skorMasuk + it.skorKeluar}</b>
               </div>
               ${it.koordinat && it.koordinat !== '-' ? `<div style="font-size:11px; color:#374151; margin-bottom:4px;">Koordinat Log: <b>${it.koordinat}</b></div>` : ''}
               ${ketBersih ? `<div style="font-size:11px; color:#374151; margin-bottom:6px;">Ket: ${ketBersih}</div>` : ''}
