@@ -271,6 +271,74 @@
       color: var(--text);
       line-height: 1.3;
     }
+    .rekap-table-scroll {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #ffffff;
+      padding: 10px;
+      margin-top: 10px;
+    }
+    .rekap-kop-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border-bottom: 2px solid #1f2937;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .rekap-kop-box img {
+      width: 44px;
+      height: 50px;
+      object-fit: contain;
+    }
+    .rekap-kop-title {
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.3;
+      text-transform: uppercase;
+    }
+    table.rekap-matrix {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+      min-width: 680px;
+    }
+    table.rekap-matrix th,
+    table.rekap-matrix td {
+      border: 1px solid #374151;
+      padding: 4px 3px;
+      text-align: center;
+    }
+    table.rekap-matrix th.sticky-col,
+    table.rekap-matrix td.sticky-col {
+      text-align: left;
+      padding-left: 5px;
+      white-space: nowrap;
+    }
+    .sym-hadir { color: #15803d; font-weight: 800; }
+    .sym-sakit { color: #d97706; font-weight: 800; }
+    .sym-izin  { color: #2563eb; font-weight: 800; }
+    .sym-alpa  { color: #dc2626; font-weight: 800; }
+    .rekap-ttd-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 14px;
+      font-size: 10.5px;
+      text-align: center;
+    }
+    .rekap-ttd-col {
+      flex: 1;
+    }
+    .rekap-ttd-line {
+      margin-top: 38px;
+      font-weight: 700;
+      text-decoration: underline;
+    }
     .summary-box {
       border: 1px solid #e5b8b8;
       border-radius: 8px;
@@ -794,7 +862,7 @@
         <div class="action-label">Absen Tugas Luar</div>
         <input type="text" id="ketTugasLuar" class="form-control" placeholder="Keterangan tugas luar / tujuan dinas..." style="margin-bottom:8px;" />
         <label for="fotoTugasLuar" style="display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px;">
-          Unggah Foto Kegiatan Tugas Luar (Opsional - Gambar)
+          Unggah Foto Kegiatan Tugas Luar (Wajib - Gambar)
         </label>
         <input
           type="file"
@@ -802,6 +870,7 @@
           class="form-control"
           accept="image/*"
           capture="environment"
+          required
           style="margin-bottom:8px; padding:8px; font-size:12px;"
         />
         <button id="btnTugasLuar" class="btn-action btn-red" onclick="klikTugasLuar()">Tugas Luar</button>
@@ -811,13 +880,14 @@
         <div class="action-label">Absen Sakit / Izin</div>
         <input type="text" id="ketSakitIzin" class="form-control" placeholder="Keterangan sakit atau izin..." style="margin-bottom:8px;" />
         <label for="lampiranSakitIzin" style="display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px;">
-          Unggah Surat Dokter / Foto Bukti (Opsional - Gambar/PDF)
+          Unggah Surat Dokter / Foto Bukti (Wajib - Gambar/PDF)
         </label>
         <input
           type="file"
           id="lampiranSakitIzin"
           class="form-control"
           accept="image/*,application/pdf"
+          required
           style="margin-bottom:8px; padding:8px; font-size:12px;"
         />
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
@@ -915,7 +985,8 @@
         </button>
       </div>
 
-      <div id="rekapList"></div>
+      <div id="rekapTabelVisual"></div>
+      <div id="rekapList" style="margin-top:12px;"></div>
     </section>
 
     <!-- HALAMAN VALIDASI ADMIN -->
@@ -1191,12 +1262,7 @@
       const kab = p.kabupaten || 'Gorontalo Utara';
       const kec = p.kecamatan || '';
       const desa = p.namaDesa || 'Desa';
-      document.getElementById('hdrKabupaten').textContent = `Kab. ${kab}`;
-      document.getElementById('hdrDesa').textContent = `Desa ${desa}${kec ? ' - Kec. ' + kec : ''}`;
-      terapkanLogoPemda(kab);
-
-      document.getElementById('berandaUserInfo').textContent =
-        `${currentUser.namaLengkap} • ${currentUser.jabatan} (${data.now.tanggal})`;
+      document.getElementById('hdrKabupaten').textContent = `Kab. ${kab}`; document.getElementById('hdrDesa').textContent = `Desa ${desa}${kec ? ' - Kec. ' + kec : ''}`; terapkanLogoPemda(kab);  document.getElementById('berandaUserInfo').textContent = `${currentUser.namaLengkap} • ${currentUser.jabatan} (${data.now.tanggal})`;
 
       const beritaWrap = document.getElementById('beritaList');
       if (!data.berita || data.berita.length === 0) {
@@ -1216,37 +1282,10 @@
       }
 
       document.getElementById('absenUserMeta').textContent =
-        `${currentUser.namaLengkap} - ${currentUser.jabatan}`;
+        `${currentUser.namaLengkap} -${currentUser.jabatan}`;
       document.getElementById('statHariEfektif').textContent = data.ringkasan.hariEfektif;
       document.getElementById('statHariAktif').textContent = data.ringkasan.hariAktif;
-      document.getElementById('statPersen').textContent = `${Number(data.ringkasan.persentase || 0).toFixed(1)}%`;
-      document.getElementById('lblTanggal').textContent = data.now.tanggal;
-      document.getElementById('lblJam').textContent = data.now.jamMenit;
-
-      const btnHarian = document.getElementById('btnAbsenHarian');
-      const ctrl = data.kontrolTombol || {};
-      const logToday = data.logHariIni;
-
-      btnHarian.className = 'btn-action';
-      btnHarian.disabled = false;
-
-      if (logToday && logToday.jenis === 'Harian') {
-        if (!logToday.jamKeluar) {
-          if (ctrl.keluarBoleh) {
-            btnHarian.textContent = 'Absen Keluar (Scan)';
-            btnHarian.classList.add('btn-red');
-          } else {
-            btnHarian.textContent = 'Sudah Absen Masuk (Keluar 15:30–21:00)';
-            btnHarian.classList.add('btn-gray');
-            btnHarian.disabled = true;
-          }
-        } else {
-          btnHarian.textContent = 'Anda telah melakukan absen hari ini';
-          btnHarian.classList.add('btn-gray');
-          btnHarian.disabled = true;
-        }
-      } else if (logToday) {
-        btnHarian.textContent = `Tercatat: ${logToday.jenis}`;
+      document.getElementById('statPersen').textContent = `${Number(data.ringkasan.persentase \vert{}\vert{} 0).toFixed(1)}\%`; document.getElementById('lblTanggal').textContent = data.now.tanggal; document.getElementById('lblJam').textContent = data.now.jamMenit;  const btnHarian = document.getElementById('btnAbsenHarian'); const ctrl = data.kontrolTombol \vert{}\vert{} {}; const logToday = data.logHariIni;  btnHarian.className = 'btn-action'; btnHarian.disabled = false;  if (logToday && logToday.jenis === 'Harian') { if (!logToday.jamKeluar) { if (ctrl.keluarBoleh) { btnHarian.textContent = 'Absen Keluar (Scan)'; btnHarian.classList.add('btn-red'); } else { btnHarian.textContent = 'Sudah Absen Masuk (Keluar 15:30–21:00)'; btnHarian.classList.add('btn-gray'); btnHarian.disabled = true; } } else { btnHarian.textContent = 'Anda telah melakukan absen hari ini'; btnHarian.classList.add('btn-gray'); btnHarian.disabled = true; } } else if (logToday) { btnHarian.textContent = `Tercatat: ${logToday.jenis}`;
         btnHarian.classList.add('btn-gray');
         btnHarian.disabled = true;
       } else {
@@ -1524,80 +1563,13 @@
       const statusEl = document.getElementById('scannerStatus');
       const labelAksi = aksi === 'KELUAR' ? 'Absen Keluar' : 'Absen Masuk';
 
-      titleEl.textContent = `Scan Barcode / QR — ${labelAksi}`;
-      statusEl.textContent = 'Membuka kamera belakang...';
-      modal.classList.add('show');
-
-      if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode('qrReaderBox');
-      }
-
-      if (isScanning) {
-        try {
-          await html5QrCode.stop();
-        } catch (e) {}
-        isScanning = false;
-      }
-
-      try {
-        await html5QrCode.start(
-          { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 220, height: 220 } },
-          async (decodedText) => {
-            if (!isScanning) return;
-            const hasil = String(decodedText || '').trim();
-            if (hasil !== KODE_BERSAMA_ABSEN) {
-              statusEl.textContent = `Kode "${hasil}" tidak sesuai. Arahkan ke kode bersama kantor desa.`;
+      titleEl.textContent = `Scan Barcode / QR — ${labelAksi}`; statusEl.textContent = 'Membuka kamera belakang...'; modal.classList.add('show');  if (!html5QrCode) { html5QrCode = new Html5Qrcode('qrReaderBox'); }  if (isScanning) { try { await html5QrCode.stop(); } catch (e) {} isScanning = false; }  try { await html5QrCode.start( { facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 220 } }, async (decodedText) => { if (!isScanning) return; const hasil = String(decodedText \vert{}\vert{} '').trim(); if (hasil !== KODE_BERSAMA_ABSEN) { statusEl.textContent = `Kode "${hasil}" tidak sesuai. Arahkan ke kode bersama kantor desa.`;
               return;
             }
             isScanning = false;
-            statusEl.textContent = `Kode terverifikasi (${hasil}). Mengirim ${labelAksi}...`;
-            try {
-              await html5QrCode.stop();
-            } catch (e) {}
-            modal.classList.remove('show');
-            ambilLokasiDanKirim(targetIdPerangkat, aksi, keterangan, hasil);
-          },
-          () => {}
-        );
-        isScanning = true;
-        statusEl.textContent = 'Kamera aktif — arahkan ke barcode / QR absen kantor desa.';
-      } catch (err) {
-        isScanning = false;
-        statusEl.textContent = 'Kamera live gagal dibuka. Gunakan tombol "Ambil Foto Kode (Kamera HP)" di bawah.';
-        showToast('Akses kamera live gagal: ' + (err.message || err));
+            statusEl.textContent = `Kode terverifikasi (${hasil}). Mengirim ${labelAksi}...`; try { await html5QrCode.stop(); } catch (e) {} modal.classList.remove('show'); ambilLokasiDanKirim(targetIdPerangkat, aksi, keterangan, hasil); }, () => {} ); isScanning = true; statusEl.textContent = 'Kamera aktif — arahkan ke barcode / QR absen kantor desa.'; } catch (err) { isScanning = false; statusEl.textContent = 'Kamera live gagal dibuka. Gunakan tombol "Ambil Foto Kode (Kamera HP)" di bawah.'; showToast('Akses kamera live gagal: ' + (err.message \vert{}\vert{} err)); } }  function klikAbsenHarian() { const logToday = currentDashboard && currentDashboard.logHariIni; const aksi = logToday && logToday.jenis === 'Harian' && !logToday.jamKeluar ? 'KELUAR' : 'MASUK'; bukaScannerUntukAksi(aksi, currentUser.idPerangkat, ''); }  async function klikTugasLuar() { const ket = document.getElementById('ketTugasLuar').value.trim(); const fotoInput = document.getElementById('fotoTugasLuar'); const file = fotoInput && fotoInput.files && fotoInput.files[0] ? fotoInput.files[0] : null;  if (!file) { showToast('Foto kegiatan tugas luar wajib diunggah.'); return; }  const logToday = currentDashboard && currentDashboard.logHariIni; const aksi = logToday && logToday.jenis === 'Tugas Luar' && !logToday.jamKeluar ? 'TUGAS_LUAR_KELUAR' : 'TUGAS_LUAR_MASUK';  try { const lampiran = await siapkanLampiranFile(file); ambilLokasiDanKirim(currentUser.idPerangkat, aksi, ket, '', lampiran); document.getElementById('ketTugasLuar').value = ''; if (fotoInput) fotoInput.value = ''; } catch (err) { showToast(err.message \vert{}\vert{} 'Gagal menyiapkan foto kegiatan.'); } }  async function klikSakitIzin(aksi) { const ket = document.getElementById('ketSakitIzin').value.trim(); const fileInput = document.getElementById('lampiranSakitIzin'); const file = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;  if (!file) { showToast(`Surat/bukti ${aksi === 'SAKIT' ? 'sakit' : 'izin'} wajib diunggah.`);
+        return;
       }
-    }
-
-    function klikAbsenHarian() {
-      const logToday = currentDashboard && currentDashboard.logHariIni;
-      const aksi = logToday && logToday.jenis === 'Harian' && !logToday.jamKeluar ? 'KELUAR' : 'MASUK';
-      bukaScannerUntukAksi(aksi, currentUser.idPerangkat, '');
-    }
-
-    async function klikTugasLuar() {
-      const ket = document.getElementById('ketTugasLuar').value.trim();
-      const fotoInput = document.getElementById('fotoTugasLuar');
-      const file = fotoInput && fotoInput.files && fotoInput.files[0] ? fotoInput.files[0] : null;
-      const logToday = currentDashboard && currentDashboard.logHariIni;
-      const aksi = logToday && logToday.jenis === 'Tugas Luar' && !logToday.jamKeluar
-        ? 'TUGAS_LUAR_KELUAR'
-        : 'TUGAS_LUAR_MASUK';
-
-      try {
-        const lampiran = await siapkanLampiranFile(file);
-        ambilLokasiDanKirim(currentUser.idPerangkat, aksi, ket, '', lampiran);
-        document.getElementById('ketTugasLuar').value = '';
-        if (fotoInput) fotoInput.value = '';
-      } catch (err) {
-        showToast(err.message || 'Gagal menyiapkan foto kegiatan.');
-      }
-    }
-
-    async function klikSakitIzin(aksi) {
-      const ket = document.getElementById('ketSakitIzin').value.trim();
-      const fileInput = document.getElementById('lampiranSakitIzin');
-      const file = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
 
       try {
         const lampiran = await siapkanLampiranFile(file);
@@ -1644,6 +1616,117 @@
       }
     }
 
+    function formatSimbolRekap(kode) {
+      if (kode === 'H') return '<span class="sym-hadir">✓</span>';
+      if (kode === 'S') return '<span class="sym-sakit">S</span>';
+      if (kode === 'I') return '<span class="sym-izin">I</span>';
+      if (kode === 'A') return '<span class="sym-alpa">A</span>';
+      return '';
+    }
+
+    function renderSimbolSelCetak(kode) {
+      return formatSimbolRekap(kode);
+    }
+
+    function renderTabelRekapVisual(d) {
+      const wrap = document.getElementById('rekapTabelVisual');
+      if (!wrap) return;
+      if (!d || !d.rekap || !d.rekap.length) {
+        wrap.innerHTML = '';
+        return;
+      }
+
+      const p = d.pengaturan || {};
+      const kabUpper = String(p.kabupaten || 'GORONTALO UTARA').toUpperCase();
+      const kecUpper = String(p.kecamatan || 'ATINGGOLA').toUpperCase();
+      const desaTitle = String(p.namaDesa || 'Monggupo').trim();
+      const desaUpper = desaTitle.toUpperCase();
+      const jumlahHari = Number(d.jumlahHariBulan || 30);
+      const namaKades = p.namaKepalaDesa || '_____________________';
+      const namaSekdes = p.namaSekretarisDesa || '_____________________';
+
+      let dayHeaders = '';
+      for (let day = 1; day <= jumlahHari; day++) {
+        dayHeaders += `<th style="min-width:18px;">${day}</th>`;
+      }
+
+      const bodyRows = d.rekap
+        .map((r, idx) => {
+          let dayCells = '';
+          for (let day = 1; day <= jumlahHari; day++) {
+            const kode = r.mapTanggal ? r.mapTanggal[day] : '';
+            dayCells += `<td>${formatSimbolRekap(kode)}</td>`; } const pctStr = `${Number(r.persentase || 0).toFixed(1)}%`;
+          return `
+            <tr>
+              <td>${idx + 1}</td>
+              <td class="sticky-col">${r.namaLengkap}</td>
+              <td class="sticky-col">${r.jabatan}</td>${dayCells}
+              <td style="font-weight:700;">${pctStr}</td>
+            </tr>`;
+        })
+        .join('');
+
+      const logoHtml = LOGO_GORONTALO_UTARA_BASE64
+        ? `<img src="${LOGO_GORONTALO_UTARA_BASE64}" alt="Logo Daerah" />`
+        : '';
+
+      wrap.innerHTML = `
+        <div class="rekap-table-scroll">
+          <div class="rekap-kop-box">
+            ${logoHtml}
+            <div class="rekap-kop-title">
+              <div>PEMERINTAH KABUPATEN ${kabUpper}</div>
+              <div>KECAMATAN ${kecUpper}</div>
+              <div>DESA ${desaUpper}</div>
+            </div>
+          </div>
+
+          <div style="text-align:center; font-size:11px; font-weight:800; margin-bottom:8px;">
+            DAFTAR HADIR BULAN ${d.bulanTahun || ''}
+          </div>
+
+          <table class="rekap-matrix">
+            <thead>
+              <tr>
+                <th rowspan="2">NO</th>
+                <th rowspan="2" class="sticky-col">NAMA</th>
+                <th rowspan="2" class="sticky-col">JABATAN</th>
+                <th colspan="${jumlahHari}">TANGGAL</th>
+                <th rowspan="2">%</th>
+              </tr>
+              <tr>
+                ${dayHeaders}
+              </tr>
+            </thead>
+            <tbody>
+              ${bodyRows}
+            </tbody>
+          </table>
+
+          <div style="margin-top:8px; font-size:10.5px; line-height:1.5;">
+            <b>Keterangan:</b>
+            <span class="sym-hadir">✓</span> = Hadir (H) &nbsp;|&nbsp;
+            <span class="sym-sakit">S</span> = Sakit &nbsp;|&nbsp;
+            <span class="sym-izin">I</span> = Izin &nbsp;|&nbsp;
+            <span class="sym-alpa">A</span> = Alpa / Tidak Absen &nbsp;|&nbsp;
+            <b>%</b> = Persentase Poin Valid
+          </div>
+
+          <div class="rekap-ttd-row">
+            <div class="rekap-ttd-col">
+              <div>Mengetahui,</div>
+              <div>Kepala Desa ${desaTitle}</div>
+              <div class="rekap-ttd-line">${namaKades}</div>
+            </div>
+            <div class="rekap-ttd-col">
+              <div>Disiapkan oleh,</div>
+              <div>Sekretaris Desa ${desaTitle}</div>
+              <div class="rekap-ttd-line">${namaSekdes}</div>
+            </div>
+          </div>
+        </div>`;
+    }
+
     async function loadRekapBulanan() {
       initFilterRekapPeriode();
       terapkanLogoPemda(
@@ -1654,17 +1737,7 @@
 
       const bulanVal = document.getElementById('rekapBulanSelect').value;
       const tahunVal = document.getElementById('rekapTahunSelect').value;
-      const yearMonthParam = bulanVal && tahunVal ? `${tahunVal}-${bulanVal}` : null;
-
-      document.getElementById('rekapPeriodeInfo').textContent = 'Memuat data rekap periode...';
-
-      try {
-        const res = await runServer('apiGetRekapBulanan', yearMonthParam);
-        const d = res.data || {};
-        currentRekapData = d;
-        terapkanLogoPemda((d.pengaturan && d.pengaturan.kabupaten) || 'Gorontalo Utara');
-        document.getElementById('rekapPeriodeInfo').textContent =
-          `Periode ${d.bulanTahun || '-'} • Hari Efektif: ${d.hariEfektif || 0} (Maks ${d.poinMaksimal || 0} pts)`;
+      const yearMonthParam = bulanVal && tahunVal ? `${tahunVal}-${bulanVal}` : null;  document.getElementById('rekapPeriodeInfo').textContent = 'Memuat data rekap periode...';  try { const res = await runServer('apiGetRekapBulanan', yearMonthParam); const d = res.data \vert{}\vert{} {}; currentRekapData = d; terapkanLogoPemda((d.pengaturan && d.pengaturan.kabupaten) \vert{}\vert{} 'Gorontalo Utara'); renderTabelRekapVisual(d); document.getElementById('rekapPeriodeInfo').textContent = `Periode ${d.bulanTahun || '-'} • Hari Efektif: ${d.hariEfektif \vert{}\vert{} 0} (Maks${d.poinMaksimal || 0} pts)`;
         const wrap = document.getElementById('rekapList');
         wrap.innerHTML = (d.rekap || [])
           .map(
@@ -1681,12 +1754,6 @@
       } catch (err) {
         showToast('Gagal memuat rekap: ' + err.message);
       }
-    }
-
-    function renderSimbolSelCetak(kode) {
-      if (kode === 'H') return '<span class="tanda-centang">✓</span>';
-      if (kode === 'I' || kode === 'S' || kode === 'A') return '<span class="tanda-silang">✕</span>';
-      return '';
     }
 
     function cetakDaftarHadirSekdes() {
@@ -1718,15 +1785,12 @@
           let dayCells = '';
           for (let day = 1; day <= jumlahHari; day++) {
             const kode = r.mapTanggal ? r.mapTanggal[day] : '';
-            dayCells += `<td>${renderSimbolSelCetak(kode)}</td>`;
-          }
-          const pctStr = `${Number(r.persentase || 0).toFixed(1)}%`;
+            dayCells += `<td>${renderSimbolSelCetak(kode)}</td>`; } const pctStr = `${Number(r.persentase || 0).toFixed(1)}%`;
           return `
             <tr>
               <td>${idx + 1}</td>
               <td class="col-nama">${r.namaLengkap}</td>
-              <td class="col-jabatan">${r.jabatan}</td>
-              ${dayCells}
+              <td class="col-jabatan">${r.jabatan}</td>${dayCells}
               <td style="font-weight:700;">${pctStr}</td>
             </tr>`;
         })
@@ -1750,7 +1814,7 @@
         </div>
 
         <div class="print-judul">
-          DAFTAR HADIR PEMERINTAH DESA ${desaUpper} BULAN ${d.bulanTahun}
+          DAFTAR HADIR PEMERINTAH DESA ${desaUpper} BULAN${d.bulanTahun}
         </div>
 
         <table class="rekap-cetak">
@@ -1775,96 +1839,6 @@
           <div class="print-legenda">
             <div><b>Keterangan:</b></div>
             <div><span class="tanda-centang">✓</span> : Hadir (H)</div>
-            <div><span class="tanda-silang">✕</span> : Izin (I), Sakit (S), Alpa (A)</div>
-            <div>% : Persentase Poin Kehadiran</div>
-          </div>
-          <div style="text-align:right;">
-            <div>Desa ${desaTitle}, ${tglCetak}</div>
-          </div>
-        </div>
-
-        <div class="print-ttd-grid">
-          <div class="print-ttd-box">
-            <div>Mengetahui / Menyetujui</div>
-            <div>Kepala Desa ${desaTitle}</div>
-            <div class="print-ttd-nama">${namaKades}</div>
-          </div>
-          <div class="print-ttd-box">
-            <div>&nbsp;</div>
-            <div>Sekretaris Desa ${desaTitle}</div>
-            <div class="print-ttd-nama">${namaSekdes}</div>
-          </div>
-        </div>
-      `;
-
-      window.print();
-    }
-
-    async function loadValidasiAdmin() {
-      try {
-        const res = await runServer('getDataValidasiAdmin', currentUser.idPerangkat, null);
-        const wrap = document.getElementById('validasiList');
-        if (!res.success) {
-          wrap.innerHTML = `<div class="news-card">${res.message}</div>`;
-          return;
-        }
-        if (!res.items || !res.items.length) {
-          wrap.innerHTML = '<div class="news-card"><div class="news-body">Tidak ada data absensi yang menunggu validasi.</div></div>';
-          return;
-        }
-        wrap.innerHTML = res.items
-          .map(
-            (it) => `
-            <div class="log-card">
-              <div class="log-top">
-                <span>${it.namaLengkap} (${it.tanggal})</span>
-                <span>${it.jenis}</span>
-              </div>
-              <div style="font-size:12px; color:#374151; margin-bottom:10px;">
-                Masuk: <b>${it.jamMasuk || '-'}</b> (Skor ${it.skorMasuk}) • Keluar: <b>${it.jamKeluar || '-'}</b> (Skor ${it.skorKeluar})<br/>
-                Ket: ${it.keterangan || '-'} • Input: ${it.diinputOleh || '-'}
-              </div>
-              <div style="display:flex; gap:8px;">
-                <button class="btn-sm bg-valid" onclick="prosesValidasi('${it.idLog}', 'VALID')">✓ Validkan</button>
-                <button class="btn-sm bg-invalid" onclick="prosesValidasi('${it.idLog}', 'TOLAK')">✕ Tolak</button>
-              </div>
-            </div>`
-          )
-          .join('');
-      } catch (err) {
-        showToast('Gagal memuat validasi: ' + err.message);
-      }
-    }
-
-    async function prosesValidasi(idLog, keputusan) {
-      try {
-        const res = await runServer('validasiAbsensiAdmin', currentUser.idPerangkat, idLog, keputusan);
-        showToast(res.message);
-        loadValidasiAdmin();
-      } catch (err) {
-        showToast('Gagal validasi: ' + err.message);
-      }
-    }
-
-    function renderProfil() {
-      document.getElementById('profilDetail').innerHTML = `
-        <b>Nama:</b> ${currentUser.namaLengkap}<br/>
-        <b>Jabatan:</b> ${currentUser.jabatan}<br/>
-        <b>NIK/NIPD:</b> ${currentUser.nikNipd || '-'}<br/>
-        <b>ID Perangkat:</b> ${currentUser.idPerangkat}<br/>
-        <b>Peran Sistem:</b> ${currentUser.role}
-      `;
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      terapkanLogoPemda('Gorontalo Utara');
-      loadDaftarLogin();
-      const saved = loadSession();
-      if (saved && saved.idPerangkat) {
-        currentUser = saved;
-        onAuthenticated();
-      }
-    });
-  </script>
-</body>
-</html>
+            <div><span class="sym-sakit">S</span> : Sakit</div>
+            <div><span class="sym-izin">I</span> : Izin</div>
+            <div><span class="sym-alpa">A</span> : Alpa / Tidak Absen</div>
