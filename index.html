@@ -13,6 +13,7 @@
   <title>Absensi Perangkat Desa</title>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <style id="dynamicPrintPageStyle">@page { size: portrait; margin: 10mm; }</style>
   <style>
     :root {
       color-scheme: light;
@@ -271,6 +272,43 @@
       color: var(--text);
       line-height: 1.3;
     }
+    .print-actions-box {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      background: #f9fafb;
+      margin-bottom: 12px;
+    }
+    .print-actions-title {
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .print-btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .btn-orient {
+      padding: 10px 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #ffffff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-portrait {
+      background: var(--primary);
+    }
+    .btn-landscape {
+      background: #1f2937;
+    }
     .rekap-table-scroll {
       width: 100%;
       overflow-x: auto;
@@ -411,9 +449,6 @@
     .btn-gray {
       background: var(--disabled);
       cursor: not-allowed;
-    }
-    .btn-dark {
-      background: #1f2937;
     }
     .legend-grid {
       display: grid;
@@ -569,7 +604,7 @@
         width: 100%;
         color: #000000;
         background: #ffffff;
-        padding: 8px 12px;
+        padding: 4px 6px;
         font-size: 10px;
       }
       .print-kop {
@@ -583,8 +618,8 @@
         text-align: center;
       }
       .print-kop img {
-        width: 58px;
-        height: 66px;
+        width: 56px;
+        height: 64px;
         object-fit: contain;
       }
       .print-kop-text div:nth-child(1) {
@@ -609,17 +644,22 @@
         margin-bottom: 8px;
         text-transform: uppercase;
       }
+      .print-table-wrap {
+        width: 100%;
+        overflow: visible;
+      }
       table.rekap-cetak {
         width: 100%;
         border-collapse: collapse;
         margin-bottom: 10px;
+        table-layout: auto;
       }
       table.rekap-cetak th,
       table.rekap-cetak td {
         border: 1px solid #000000;
         padding: 3px 2px;
         text-align: center;
-        font-size: 8.5px;
+        font-size: 8px;
       }
       table.rekap-cetak td.col-nama,
       table.rekap-cetak th.col-nama {
@@ -645,8 +685,10 @@
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-top: 10px;
-        font-size: 10px;
+        margin-top: 8px;
+        font-size: 9.5px;
+        page-break-inside: avoid;
+        break-inside: avoid;
       }
       .print-legenda {
         line-height: 1.5;
@@ -654,15 +696,18 @@
       .print-ttd-grid {
         display: flex;
         justify-content: space-between;
-        margin-top: 12px;
+        gap: 24px;
+        margin-top: 14px;
         text-align: center;
-        font-size: 10.5px;
+        font-size: 10px;
+        page-break-inside: avoid;
+        break-inside: avoid;
       }
       .print-ttd-box {
-        width: 46%;
+        flex: 1;
       }
       .print-ttd-nama {
-        margin-top: 48px;
+        margin-top: 46px;
         font-weight: 800;
         text-decoration: underline;
       }
@@ -979,10 +1024,16 @@
         </div>
       </div>
 
-      <div id="sekdesPrintWrap" style="display:none; margin-bottom:14px;">
-        <button type="button" class="btn-action btn-dark" onclick="cetakDaftarHadirSekdes()">
-          🖨️ Cetak / Unduh Daftar Hadir Bulanan (Sekdes)
-        </button>
+      <div class="print-actions-box">
+        <div class="print-actions-title">🖨️ Cetak / Simpan Dokumen PDF Daftar Hadir</div>
+        <div class="print-btn-row">
+          <button type="button" class="btn-orient btn-portrait" onclick="cetakDokumenRekap('portrait')">
+            📄 Cetak Portrait
+          </button>
+          <button type="button" class="btn-orient btn-landscape" onclick="cetakDokumenRekap('landscape')">
+            🖼️ Cetak Landscape
+          </button>
+        </div>
       </div>
 
       <div id="rekapTabelVisual"></div>
@@ -1147,12 +1198,6 @@
       } catch (e) {
         return null;
       }
-    }
-
-    function isSekretarisDesa(user) {
-      if (!user) return false;
-      const jab = String(user.jabatan || '').toLowerCase();
-      return jab.indexOf('sekretaris desa') !== -1 || jab.indexOf('sekdes') !== -1;
     }
 
     function logoutUser() {
@@ -1720,6 +1765,17 @@
       }
     }
 
+    function formatTanggalUnduhIndo(dateObj = new Date()) {
+      const bln = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+      const d = dateObj.getDate();
+      const m = dateObj.getMonth();
+      const y = dateObj.getFullYear();
+      return `${d} ${bln[m]} ${y}`;
+    }
+
     function formatSimbolRekap(kode) {
       if (kode === 'H') return '<span class="sym-hadir">✓</span>';
       if (kode === 'S') return '<span class="sym-sakit">S</span>';
@@ -1748,6 +1804,7 @@
       const jumlahHari = Number(d.jumlahHariBulan || 30);
       const namaKades = p.namaKepalaDesa || '_____________________';
       const namaSekdes = p.namaSekretarisDesa || '_____________________';
+      const tglUnduh = formatTanggalUnduhIndo(new Date());
 
       let dayHeaders = '';
       for (let day = 1; day <= jumlahHari; day++) {
@@ -1826,7 +1883,7 @@
               <div class="rekap-ttd-line">${namaKades}</div>
             </div>
             <div class="rekap-ttd-col">
-              <div>Disiapkan oleh,</div>
+              <div>${desaTitle}, ${tglUnduh}</div>
               <div>Sekretaris Desa ${desaTitle}</div>
               <div class="rekap-ttd-line">${namaSekdes}</div>
             </div>
@@ -1839,8 +1896,6 @@
       terapkanLogoPemda(
         (currentRekapData && currentRekapData.pengaturan && currentRekapData.pengaturan.kabupaten) || 'Gorontalo Utara'
       );
-      document.getElementById('sekdesPrintWrap').style.display =
-        isSekretarisDesa(currentUser) ? 'block' : 'none';
 
       const bulanVal = document.getElementById('rekapBulanSelect').value;
       const tahunVal = document.getElementById('rekapTahunSelect').value;
@@ -1875,16 +1930,24 @@
       }
     }
 
-    function cetakDaftarHadirSekdes() {
-      if (!isSekretarisDesa(currentUser)) {
-        showToast('Fitur cetak/unduh rekap bulanan khusus Sekretaris Desa.');
-        return;
+    function setOrientasiCetak(orientasi) {
+      const isLand = orientasi === 'landscape';
+      const styleTag = document.getElementById('dynamicPrintPageStyle');
+      if (styleTag) {
+        styleTag.textContent = isLand
+          ? '@page { size: landscape; margin: 8mm; }'
+          : '@page { size: portrait; margin: 10mm; }';
       }
+    }
+
+    function cetakDokumenRekap(orientasi = 'portrait') {
       const d = currentRekapData;
       if (!d || !d.rekap) {
         showToast('Data rekap belum siap.');
         return;
       }
+
+      setOrientasiCetak(orientasi);
 
       const p = d.pengaturan || {};
       const kabUpper = String(p.kabupaten || 'GORONTALO UTARA').toUpperCase();
@@ -1892,11 +1955,13 @@
       const desaTitle = String(p.namaDesa || 'Monggupo').trim();
       const desaUpper = desaTitle.toUpperCase();
       const jumlahHari = Number(d.jumlahHariBulan || 30);
-      const tglCetak = d.tanggalCetak || '';
+      const tglUnduh = formatTanggalUnduhIndo(new Date());
+      const cellFontPx = orientasi === 'landscape' ? '8px' : '6.8px';
+      const dayPad = orientasi === 'landscape' ? '2px 1.5px' : '2px 1px';
 
       let dayHeaders = '';
       for (let day = 1; day <= jumlahHari; day++) {
-        dayHeaders += `<th style="width:15px;">${day}</th>`;
+        dayHeaders += `<th style="padding:${dayPad}; font-size:${cellFontPx};">${day}</th>`;
       }
 
       const rowsHtml = d.rekap
@@ -1904,16 +1969,16 @@
           let dayCells = '';
           for (let day = 1; day <= jumlahHari; day++) {
             const kode = r.mapTanggal ? r.mapTanggal[day] : '';
-            dayCells += `<td>${renderSimbolSelCetak(kode)}</td>`;
+            dayCells += `<td style="padding:${dayPad}; font-size:${cellFontPx};">${renderSimbolSelCetak(kode)}</td>`;
           }
           const pctStr = `${Number(r.persentase || 0).toFixed(1)}%`;
           return `
             <tr>
-              <td>${idx + 1}</td>
-              <td class="col-nama">${r.namaLengkap}</td>
-              <td class="col-jabatan">${r.jabatan}</td>
+              <td style="padding:${dayPad}; font-size:${cellFontPx};">${idx + 1}</td>
+              <td class="col-nama" style="padding:${dayPad}; font-size:${cellFontPx};">${r.namaLengkap}</td>
+              <td class="col-jabatan" style="padding:${dayPad}; font-size:${cellFontPx};">${r.jabatan}</td>
               ${dayCells}
-              <td style="font-weight:700;">${pctStr}</td>
+              <td style="font-weight:700; padding:${dayPad}; font-size:${cellFontPx};">${pctStr}</td>
             </tr>`;
         })
         .join('');
@@ -1923,7 +1988,7 @@
         : '';
 
       const namaKades = p.namaKepalaDesa || '_______________________';
-      const namaSekdes = p.namaSekretarisDesa || currentUser.namaLengkap || '_______________________';
+      const namaSekdes = p.namaSekretarisDesa || '_______________________';
 
       document.getElementById('printArea').innerHTML = `
         <div class="print-kop">
@@ -1939,23 +2004,25 @@
           DAFTAR HADIR PEMERINTAH DESA ${desaUpper} BULAN ${d.bulanTahun || ''}
         </div>
 
-        <table class="rekap-cetak">
-          <thead>
-            <tr>
-              <th rowspan="2" style="width:22px;">NO</th>
-              <th rowspan="2" class="col-nama">NAMA</th>
-              <th rowspan="2" class="col-jabatan">JABATAN</th>
-              <th colspan="${jumlahHari}">TANGGAL</th>
-              <th rowspan="2" style="width:38px;">%</th>
-            </tr>
-            <tr>
-              ${dayHeaders}
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml}
-          </tbody>
-        </table>
+        <div class="print-table-wrap">
+          <table class="rekap-cetak">
+            <thead>
+              <tr>
+                <th rowspan="2" style="padding:${dayPad}; font-size:${cellFontPx};">NO</th>
+                <th rowspan="2" class="col-nama" style="padding:${dayPad}; font-size:${cellFontPx};">NAMA</th>
+                <th rowspan="2" class="col-jabatan" style="padding:${dayPad}; font-size:${cellFontPx};">JABATAN</th>
+                <th colspan="${jumlahHari}" style="padding:${dayPad}; font-size:${cellFontPx};">TANGGAL</th>
+                <th rowspan="2" style="padding:${dayPad}; font-size:${cellFontPx};">%</th>
+              </tr>
+              <tr>
+                ${dayHeaders}
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
 
         <div class="print-footer-wrap">
           <div class="print-legenda">
@@ -1966,7 +2033,7 @@
             <div><span class="sym-alpa">A</span> : Alpa / Tidak Absen</div>
             <div><b>%</b> : Persentase Poin Valid</div>
           </div>
-          <div>Dicetak pada: ${tglCetak}</div>
+          <div>Orientasi: ${orientasi === 'landscape' ? 'Landscape' : 'Portrait'}</div>
         </div>
 
         <div class="print-ttd-grid">
@@ -1976,13 +2043,15 @@
             <div class="print-ttd-nama">${namaKades}</div>
           </div>
           <div class="print-ttd-box">
-            <div>Disiapkan oleh,</div>
+            <div>${desaTitle}, ${tglUnduh}</div>
             <div>Sekretaris Desa ${desaTitle}</div>
             <div class="print-ttd-nama">${namaSekdes}</div>
           </div>
         </div>`;
 
-      window.print();
+      setTimeout(() => {
+        window.print();
+      }, 150);
     }
 
     async function loadValidasiAdmin() {
